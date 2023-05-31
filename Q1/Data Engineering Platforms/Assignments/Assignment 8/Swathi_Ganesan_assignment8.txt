@@ -1,0 +1,96 @@
+/***********************************************
+** Auth:   Swathi Ganesan
+** Date:   12/07/2022
+************************************************/
+
+// Q1. Find all producers that produced the movie When Harry Met Sally. 
+
+MATCH (p:Person)-[:PRODUCED]->(m:Movie)
+WHERE m.title = 'When Harry Met Sally' 
+RETURN DISTINCT p.name as PRODUCER;
+
+// Q2. Find directors who have directed more than 2 movies.  Return the name of the director and the count of movies they directed, ordered by movie count in descending order.
+
+MATCH (p:Person)-[:DIRECTED]->(m:Movie) 
+WITH p, size(collect(m.title)) AS s
+WHERE s > 2
+RETURN DISTINCT p.name AS DIRECTOR, s AS `#MOVIES`;
+
+// Q3. Find the actors who acted in 5+ movies and the movies in which they acted.  Return the name of the actor, and the title of the films, ordered by the number of films acted per actor in descending order.
+
+MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+WITH p, collect(m.title) AS m
+WHERE size(m)>=5
+RETURN DISTINCT p.name AS ACTOR, m AS MOVIES
+ORDER BY size(m) DESC;
+
+// Q4. Find the people who were the producer, writer, AND director (the same person who held all 3 roles) at the same time on a film. Return the names of the people and the titles of the films.
+
+MATCH (p:Person)-[:PRODUCED]->(m:Movie)<-[:WROTE]->(p:Person)<-[:DIRECTED]->(m:Movie)
+RETURN DISTINCT p.name AS PERSON, m.title AS MOVIE;
+
+// Q5. Find all the actors that are exactly 3 degrees away from Tom Hanks.  NOTE: In this case, we want to define a "degree" as a common connection between two people.  So, if Tom Hanks is connected to Gary Sinise by way of them both acting in Apollo 13, then that connection has a path length of 2, and we would consider Gary Sinise to be 1 degree away from Tom Hanks since they both acted in the same movie.
+
+MATCH (p1:Person {name:"Tom Hanks"})-[*6]-(p2:Person)
+RETURN DISTINCT p2.name AS PERSON;
+
+// Q6. Update database to reflect new name ("Larry Wachowski") for director "Lana Wachowski".
+
+MATCH (p:Person {name: 'Lana Wachowski'})
+SET p.name = 'Larry Wachowski'
+RETURN p;
+
+// Q7. Create a section of fun movies whose summary contains the keyword "fun".
+// Performing case insensitive search for keyword "fun" in order to identify fun movies
+
+MATCH (p:Person)-[r:REVIEWED]->(m:Movie)
+WHERE toLower(r.summary) CONTAINS toLower('fun')
+RETURN DISTINCT m.title as `FUN MOVIES`;
+
+// Q8. List all the release years and count all movies released in that year.
+
+MATCH (m:Movie)
+WITH m.released as `YEAR`, size(collect(m.title)) as `#MOVIES RELEASED`
+RETURN DISTINCT `YEAR`, `#MOVIES RELEASED`
+ORDER BY YEAR ASC;
+
+// Q9. List all the movies whose rating >= 90.
+
+MATCH (p:Person)-[r:REVIEWED]->(m:Movie)
+WHERE r.rating >= 90
+RETURN DISTINCT m.title AS MOVIE;
+
+// Q10. List the top producers who are most likely to entertain new movies production hint: Producers with most movies produced.
+// Since it is mentioned list top producers in the plural I have listed producers in the descending order of their likeliness to entertain new movies based on number of movies produced
+
+MATCH (p:Person)-[:PRODUCED]->(m:Movie)
+WITH p, size(collect(m.title)) AS c
+ORDER BY c DESC
+RETURN DISTINCT p.name AS PRODUCER;
+
+// Q11. List all the movies along with a number of reviews received. order the results by a number of reviews in descending order.
+
+MATCH (p:Person)-[r:REVIEWED]->(m:Movie)
+WITH size(collect(r.rating)) AS review, m
+RETURN DISTINCT m.title AS MOVIE, review AS `#REVIEWS`
+ORDER BY `#REVIEWS` DESC;
+
+// Q12. Find the shortest path between movies "The Matrix" and "The Matrix Reloaded".
+
+MATCH s=shortestPath((m1:Movie {title:"The Matrix"})-[*]-(m2:Movie {title:"The Matrix Reloaded"}))
+RETURN s;
+
+// Q13. List all the writers and the list of movies they have written.
+
+MATCH (p:Person)-[:WROTE]->(m:Movie)
+WITH p, collect(m.title) AS t
+RETURN DISTINCT p.name AS WRITER, t AS MOVIES;
+
+// Q14. List top 15 actors who have co-acted with each other the most. Ignore The Matrix trilogy for this analysis.
+
+MATCH (actor:Person)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(coactors:Person)
+WHERE NOT m.title IN ['The Matrix', 'The Matrix Reloaded', 'The Matrix Revolutions']
+WITH actor, count(coactors) as TimesCoacted
+ORDER BY TimesCoacted DESC
+RETURN DISTINCT actor.name
+LIMIT 15;

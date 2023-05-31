@@ -1,0 +1,117 @@
+// Q1
+db.customers.find({ "District" : "California" }).count()
+
+// Q2
+db.films.find(
+  { "Rating" : "NC-17" }, { "Title" : 1, "Rating" : 1, 
+  '_id' : 0}
+).sort({ "Title" : 1})
+
+// Q3
+db.films.aggregate(
+  { $group : { _id : "$Title", total : { $sum : { $size : "$Actors" } } } }, 
+  { $project : { _id : 0, Title : "$_id", 
+  Count_of_Actors : '$total', } }
+).sort({ "Title" : 1})
+
+// Q4
+db.films.aggregate(
+  { $group : { _id : "$Category", total : { $count : {} } }}, 
+  { $project : { _id : 0, Category : "$_id", 
+  Count_per_Category : '$total', } }
+).sort({ "Count_per_Category" : - 1})
+
+// Q5
+db.films.find(
+  { $or : [ { $expr : { $gt : [{ $toDouble : "$Length" }, 
+  25] } }, { $expr : { "Special Features" : / Commentaries / } } ] }, 
+  { "_id" : 0, "Title" : 1, "Length" : 1, 
+  "Special Features" : 1}
+).limit(2)
+
+// Q6 
+db.customers.aggregate(
+  { $group : { _id : "$Country", total : { $count : { }} } }, 
+  { $sort : { total :-1 }}, { $project : { _id : 0, 
+  Country : "$_id" } }, { $limit : 10 }
+)
+
+// Q7
+db.films.aggregate(
+  { $group : { _id : "$Replacement Cost", 
+  total : { $count : { } } } }, { $project : { _id : 0, 
+  "Replacement Cost" : "$_id", "Count_of_Replacement_Cost" : '$total', 
+  } }
+)
+
+// Q8
+db.films.find(
+  { "Description" : / Mexico / }, { "_id" : 0, 
+  "Title" : 1}
+)
+
+// Q9
+// No Data
+
+// Q10
+db.customers.aggregate(
+  { $unwind : "$Rentals" }, { $replaceRoot : { newRoot : "$Rentals" }}, 
+  { $unwind : "$Payments" }, { $replaceRoot : { newRoot : "$Payments" }}, 
+  { "$addFields" : { "Payment Date" : { "$toDate" : "$Payment Date" } } }, 
+  { $project : { Amount : "$Amount", date : "$Payment Date", 
+  year : { $year : "$Payment Date" }, month : { $month : "$Payment Date" } } }, 
+  { $match : { "month" : 8, "year" : 2005 } }, 
+  { $group : { _id : null, revenue : { $sum : "$Amount" } } }, 
+  {$project : {_id : 0}}
+)
+
+// Q11 
+db.films.aggregate(
+  { $group : { _id : "$Title", total : { $sum : { $size : "$Actors" } } } }, 
+  { $sort : { total :-1 }}, { $project : { _id : 0, 
+  Title : "$_id" } }, { $limit : 1 }
+)
+
+// Q12
+db.customers.aggregate(
+  { $unwind : "$Rentals" }, 
+  { $replaceRoot : { newRoot : "$Rentals" }}, 
+  { $lookup : { 
+  from 
+    : "films", 
+    localField : "filmId", 
+    foreignField : "_id", 
+    as : "Films" } }, 
+    { $unwind : "$Films" }, 
+    { $replaceRoot : { newRoot : "$Films" }}, 
+    { $group : { _id : "$Rating", 
+    total : { $count : { } } } }, 
+    { $sort : { total :-1 }}, 
+    { $project : { _id : 0, 
+    "Top Movie Rating" : "$_id" } }, 
+    { $limit : 1 }
+)
+
+// Q13
+db.films.aggregate(
+  [ { $unwind : "$Actors" }, { $group : { _id : "$Category", 
+  Unique_Actors : {$addToSet : "$Actors" } }}, 
+  {$project : { _id : 0, Category : "$_id", 
+  Actors_Count : {$size : "$Unique_Actors" } }} ]
+)
+
+// Q14
+db.films.aggregate(
+  { $group : { _id : "$Category", total : { $avg : { "$toInt" : "$Length" } } } }, 
+  { $project : { _id : 0, Category : "$_id", 
+  Average_Length : '$total', } }
+)
+
+// Q15
+db.customers.aggregate(
+  { $group : { _id : { First_Name : "$First Name", 
+  Last_Name : "$Last Name" }, total : { $sum : { $size : "$Rentals" } } } }, 
+  { "$match" : { "total" : { $gte : 40 } }}, 
+  {$project : {_id : 0, Customer : { $concat : [ "$_id.First_Name", 
+  " ", "$_id.Last_Name" ] }}}
+)

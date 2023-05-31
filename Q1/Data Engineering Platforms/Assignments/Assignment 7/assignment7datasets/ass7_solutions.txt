@@ -1,0 +1,275 @@
+Q1 : Return the total number of customers living in California
+db.customers.find({"District": "California"}).count()
+A1
+9
+
+*************************************************************************************************************************************************
+Q2 : List all movies that are rated NC-17.  Return the title and the rating, sorted alphabetically by title.
+***what to do about _id and should the order of columns returned matter??
+db.films.find({"Rating": "NC-17"},{"Title": 1,"Rating": 1, '_id': 0}).sort({"Title": 1})
+A2
+Adaptation Holes 210
+
+*************************************************************************************************************************************************
+Q3 : List the movie titles and the count of actors in each movie, sorted alphabetically by title.
+
+db.films.aggregate(
+   {
+        $group: {
+            _id: "$Title",
+            total: { $sum: { $size:"$Actors" } }
+        }
+   },
+{
+  $project: {
+    _id: 0,
+    Title: "$_id",
+    Count_of_Actors: '$total',
+  }
+}
+).sort({"Title": 1})
+
+A3
+{
+  "Title": "ACADEMY DINOSAUR",
+  "Count_of_Actors": 10
+} 1000
+
+*************************************************************************************************************************************************
+Q4 : List the count of movies by category.  Return the category and the count, sorted by the count per category descending.
+
+db.films.aggregate(
+   {
+        $group: {
+            _id: "$Category",
+            total: { $count:{} }
+        }},
+{
+  $project: {
+    _id: 0,
+    Category: "$_id",
+    Count_per_Category: '$total',
+  }
+}
+
+).sort({"Count_per_Category": -1})
+
+A4
+{
+  "Category": "Sports",
+  "Count_per_Category": 74
+} 16
+
+*************************************************************************************************************************************************
+Q5 : List the top 2 movies with movie length greater than 25mins or which has commentaries as special features.  Return the movie title, length, and special features.
+
+db.films.find( { $or: [ { "Length": { $gt: "25" } }, { "Special Features":  /Commentaries/ } ] },
+{"_id" : 0, "Title": 1, "Length" : 1, "Special Features" : 1} ).limit(2)
+
+A5
+{
+  "Length": "50",
+  "Special Features": "Trailers,Deleted Scenes",
+  "Title": "ADAPTATION HOLES"
+},
+{
+  "Length": "62",
+  "Special Features": "Trailers,Deleted Scenes",
+  "Title": "AIRPLANE SIERRA"
+}
+
+*************************************************************************************************************************************************
+Q6 : List top 10 countries with the most number of customers.
+
+db.customers.aggregate({
+        $group: {
+            _id: "$Country",
+            total: { $count : { }}
+        }
+}).sort({"total": -1}).project({_id: 0,
+    Country: "$_id"}).limit(10)
+
+A6
+India, China ...
+... Turkey, Indonesia
+
+*************************************************************************************************************************************************
+Q7 : List all replacement costs along with count for each replacement cost.
+
+db.films.aggregate(
+   {
+        $group: {
+            _id: "$Replacement Cost",
+            total: { $count: { } }
+        }
+   },
+{
+  $project: {
+    _id: 0,
+    "Replacement Cost": "$_id",
+    "Count_of_Replacement_Cost": '$total',
+  }
+}
+)
+
+A7
+{
+  "Replacement Cost": "28.99",
+  "Count_of_Replacement_Cost": 41
+} 21
+
+*************************************************************************************************************************************************
+Q8 : List all films relating to Mexico for a Cinco de Mayo promotion special.
+
+db.films.find(  { "Description":  /Mexico/ },
+{"_id" : 0, "Title": 1, "Description" : 1} )
+
+A8
+African Egg ...
+... Terminator Club 38
+
+*************************************************************************************************************************************************
+Q9 : List all the new releases for 2020 in order to promote them.
+
+NO DATA
+
+*************************************************************************************************************************************************
+Q10 : Calculate revenue for the Month of August 2005.
+
+db.customers.aggregate( [ { $unwind: "$Rentals" },
+ {   $replaceRoot:{ newRoot:"$Rentals" }},
+     { $unwind: "$Payments" },{ 
+     $replaceRoot:{ newRoot:"$Payments" }},
+      { "$addFields": {
+        "Payment Date": {
+            "$toDate": "$Payment Date"
+        }
+    } },{
+       $project:
+         {
+           Amount: "$Amount",
+           date: "$Payment Date",
+           year: { $year: "$Payment Date" },
+           month: { $month: "$Payment Date" }
+         }
+     },
+     { $match : { "month" : 8, "year": 2005 } },
+      {
+        $group: {
+            _id: null,
+            total: { $sum: "$Amount" }
+        }
+   },{$project : {_id : 0}}
+   ] )
+   
+ 
+A10
+{
+  "total": 24070.139395952225
+}
+*************************************************************************************************************************************************
+Q11 : Find movies with the highest number of Actors.
+
+db.films.aggregate(
+   {
+        $group: {
+            _id: "$Title",
+            total: { $sum: { $size:"$Actors" } }
+        }
+   }
+).sort({"total": -1}).project({
+    _id: 0,
+    Title: "$_id"
+  }
+).limit(1)
+
+A11 
+{
+  "Title": "LAMBS CINCINATTI"
+}
+
+*************************************************************************************************************************************************
+Q12 : List top Movie rating that is rented the most / popular among the customers.
+
+db.films.aggregate(
+   {
+        $group: {
+            _id: "$Rating",
+            total: { $count: { } }
+        }
+   }
+).sort({"total": -1}).project({
+    _id: 0,
+    Title: "$_id"
+  }
+).limit(1)
+
+A12
+{
+  "Title": "PG-13"
+} 223
+
+*************************************************************************************************************************************************
+Q13 : List number of actors who worked in each category of films.
+
+db.films.aggregate( [ { $unwind: "$Actors" },
+{     $group:
+       {
+         _id: "$Category",
+         Unique_Actors: {$addToSet: "$Actors"}
+       }},
+    {$project: {
+      _id: 0,
+      Category : "$_id",
+      Actors_Count: {$size: "$Unique_Actors"}
+    }}
+   ] )
+   
+A13
+already checked
+*************************************************************************************************************************************************
+Q14 : Find the average length of movies in each category.
+
+db.films.aggregate(
+   {
+        $group: {
+            _id: "$Category",
+            total: { $avg: { "$toInt": "$Length" } }
+        }
+   },
+{
+  $project: {
+    _id: 0,
+    Category: "$_id",
+    Average_Length: '$total',
+  }
+}
+)
+
+A14
+{
+  "Category": "Comedy",
+  "Average_Length": 115.82758620689656
+}
+
+*************************************************************************************************************************************************
+Q15 : List the customers with at least 40 rentals.
+
+db.customers.aggregate(
+   {
+        $group: {
+             _id: {
+            First_Name: "$First Name",
+            Last_Name: "$Last Name"
+        },
+            total: { $sum: { $size:"$Rentals" } }
+        }
+   },{"$match": {"total":{ $gte: 40 } }},{$project: 
+   {_id :0, Customer: { $concat: [ "$_id.First_Name", " ", "$_id.Last_Name" ] }}})
+   
+   
+A15
+Tammy Sanders ...
+... Karl Seal 7
+
+*************************************************************************************************************************************************
