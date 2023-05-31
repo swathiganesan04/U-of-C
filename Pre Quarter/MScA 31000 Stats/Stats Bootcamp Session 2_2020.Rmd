@@ -1,0 +1,263 @@
+---
+title: 'Introduction to Statistical Analysis'
+author: "Dr. Anil Chaturvedi"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+#Reading in the owid-covid-data.csv file
+#Source: https://ourworldindata.org/coronavirus-source-data
+
+#import libraries
+
+``` {r}
+require(tidyverse)
+```
+#Data load and prep. load data
+``` {r}
+#myfile <- file.choose()
+covid_data= read.csv(file="C:/Users/anilc/OneDrive/Desktop/Anil/Stats Bootcamp/Data sets/owid-covid-data.csv", 
+                    header=TRUE)
+```
+#Exploratory Data Analysis and Data Prep. review range of variables
+``` {r}
+str(covid_data)
+summary(covid_data)
+dim(covid_data)
+```
+#Omitting all rows with missing data, performing univariate summaries of the 40 variables in the data. Also looking at the dimensionaloty of the data
+``` {r}
+covid_data_nona=na.omit(covid_data)
+dim(covid_data_nona)
+names(covid_data)
+str(covid_data)
+summary(covid_data)
+dim(covid_data)
+```
+# Plotting the daily number of cases in some select countries
+``` {r}
+covid_data %>% 
+  arrange(date) %>% 
+  filter(location %in% c("United States", "India", "China",
+                         "South Africa", "Germany", "Brazil", "United Kingdom")) %>% 
+  ggplot(aes(x = as.Date(date), y = new_cases, color = location)) +
+  geom_line() +
+  labs(title = "# of New COVID-19 Cases") + 
+  xlab("Date") + 
+  ylab("# of New Cases")
+```
+# Plotting the daily number of cases in some select countries
+``` {r}
+covid_data %>% 
+  arrange(date) %>% 
+  filter(location %in% c("United States", "India", "Brazil")) %>% 
+  ggplot(aes(x = location, y = new_cases, fill = location)) +
+  geom_boxplot() +
+  labs(title = "New COVID-19 Cases") + 
+  xlab("Country") + 
+  ylab("# of New Cases")
+```
+# Plotting the daily number of cases in some select countries
+``` {r}
+covid_data %>% 
+  arrange(date) %>% 
+  filter(location %in% c("United States", "India", "Brazil")) %>%  
+  group_by(location) %>% 
+  summarize(new_deaths = sum(new_deaths, na.rm = TRUE)) %>% 
+  ggplot(aes(x = location, y = new_deaths, fill = location)) +
+  geom_col() +
+  labs(title = "Total COVID-19 Deaths") + 
+  xlab("Country") + 
+  ylab("# of COVID-19 Deaths")
+#
+```
+# Week 2: The concept of sampling distributions. Generate populations of size 100,000 from various distributions such as Uniform,normal, poisson,binomial, Gamma, and Chi-Square. Investigate the behavior of the mean value of 10,000 samples - where sample size is varied from 10, 30, and 100 
+```{r}
+set.seed(123)
+require(graphics)
+  fun.sim = function (pop_size, pop_distribution, nsamples, sample_size) {
+    if(pop_distribution == "uniform") {population = runif(pop_size, 0,100)}
+    if(pop_distribution == "normal") {population = rnorm(pop_size, 50, 5)} 
+    if(pop_distribution == "poisson") {population = rpois(pop_size, 50)} 
+    if(pop_distribution == "binomial") {population = rbinom(pop_size, 1000, .05)}
+    if(pop_distribution == "gamma") {population = rgamma(pop_size, 50)}
+    if(pop_distribution == "chi-square") {population = rchisq(pop_size, df=50)}
+    vector_of_means = c()
+    for(i in 1:nsamples) {vector_of_means = c(vector_of_means, mean(sample(population, sample_size, replace=FALSE)))}
+    return(vector_of_means)
+  }
+
+# Setting number of plots per plotting area as 3 x 2
+  
+par(mfrow=c(3,2))  
+hist(fun.sim(100000, "uniform",10000,30), col="Blue", breaks=15)
+hist(fun.sim(100000, "normal",10000,30), col="Red", breaks = 15)
+hist(fun.sim(100000, "poisson",10000,30), col="Pink", breaks = 15)
+hist(fun.sim(100000, "binomial",10000,30), col="Green", breaks = 15)
+hist(fun.sim(100000, "gamma",10000,30), col="Orange", breaks = 15)
+hist(fun.sim(100000, "chi-square",10000,30), col="Violet", breaks = 15)
+
+hist(fun.sim(100000, "uniform",10000,10), col="Blue", breaks = 15)
+hist(fun.sim(100000, "normal",10000,10), col="Red", breaks = 15)
+hist(fun.sim(100000, "poisson",10000,10), col="Pink", breaks = 15)
+hist(fun.sim(100000, "binomial",10000,10), col="Green", breaks =15)
+hist(fun.sim(100000, "gamma",10000,10), col="Orange", breaks = 15)
+hist(fun.sim(100000, "chi-square",10000,30), col="Violet", breaks = 15)
+
+hist(fun.sim(100000, "uniform",10000,100), col="Blue", breaks = 15)
+hist(fun.sim(100000, "normal",10000,100), col="Red", breaks = 15)
+hist(fun.sim(100000, "poisson",10000,100), col="Pink", breaks = 15)
+hist(fun.sim(100000, "binomial",10000,100), col="Green", breaks = 15)
+hist(fun.sim(100000, "gamma",10000,100), col="Orange", breaks = 15)
+hist(fun.sim(100000, "chi-square",10000,30), col="Violet", breaks = 15)
+# 
+```
+# Now let us look momentarily at what happens when we sub-sample 1000 times from a sample. We will take one of the samples of 10,000 from above, and define a sub-sample (eg.g., training data) of size 7000. The concept of sub-sampling from a sample, not the population. Rememer - in our case, the mean was always 50. 
+```{r}
+par(mfrow=c(3,2))
+set.seed(123)
+#Let us generate sub-samples of size 7,000 from a sample of size 10,000 drawn from a population of size 100,000 
+# CASE 1: When the population is Uniformly distributed
+pop = runif(100000, 0,100)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 7000, replace=FALSE)))}
+hist(vector_of_means, col="Blue", breaks = 15, main="MuTaTe: Subsampling with Uniform Population")
+
+# CASE 2: When the population is normally distributed
+pop = rnorm(100000, 50, 5)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 7000, replace=FALSE)))}
+hist(vector_of_means, col="Red", breaks = 15, main="MuTaTe: Subsampling with Normal Population")
+
+# CASE 3: When the population is poisson distributed
+pop = rpois(100000, 50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 7000, replace=FALSE)))}
+hist(vector_of_means, col="Green", breaks = 15, main="MuTaTe: Subsampling with Poisson Population")
+
+# CASE 4: When the population is Binomial distributed
+pop = rbinom(100000, 1000, .05)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 7000, replace=FALSE)))}
+hist(vector_of_means, col="Violet", breaks = 15, main="MuTaTe: Subsampling with Binomial Population")
+
+# CASE 5: When the population is Gamma distributed
+pop = rgamma(100000, 50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 7000, replace=FALSE)))}
+hist(vector_of_means, col="Cyan", breaks = 15, main="MuTaTe: Subsampling with Gamma Population")
+
+# CASE 6: When the population is Chi-Square distributed
+pop = rchisq(100000, df=50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 7000, replace=FALSE)))}
+hist(vector_of_means, col="Orange", breaks = 15, main="MuTaTe: Subsampling with Chi-Square Population")
+#
+```
+# The plots above indicate the concept of re-sampling - without replacement. I call this multiple Train and Test. This is what should be used for model validation and Ensemble based models
+# Finally, we will do the same - but now we will model with replacement
+```{r}
+par(mfrow=c(3,2))
+set.seed(123)
+#Let us generate sub-samples of size 7,000 from a sample of size 10,000 drawn from a population of size 100,000 
+# CASE 1: When the population is Uniformly distributed
+pop = runif(100000, 0,100)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_means, col="Blue", breaks = 15, main="Bootstrapping with Uniform Population")
+
+# CASE 2: When the population is normally distributed
+pop = rnorm(100000, 50, 5)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_means, col="Red", breaks = 15, main="Bootstrapping with Normal Population")
+
+# CASE 3: When the population is poisson distributed
+pop = rpois(100000, 50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_means, col="Green", breaks = 15, main="Bootstrapping with Poisson Population")
+
+# CASE 4: When the population is Binomial distributed
+pop = rbinom(100000, 1000, .05)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_means, col="Violet", breaks = 15, main="Bootstrapping with Binomial Population")
+
+# CASE 5: When the population is Gamma distributed
+pop = rgamma(100000, 50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_means, col="Cyan", breaks = 15, main="Bootstrapping with Gamma Population")
+
+# CASE 6: When the population is Chi-Square distributed
+pop = rchisq(100000, df=50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_means = c()
+for(i in 1:10000) {vector_of_means = c(vector_of_means, mean(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_means, col="Orange", breaks = 15, main="Bootstrapping with Chi-Square Population")
+# 
+```
+# To close out the examples on Sampling Distributions, Let us look at the sampling distributions of the Maximum values from multiple samples
+# We will sample with replacement in this case, for illustration.
+```{r}
+par(mfrow=c(3,2))
+set.seed(123)
+#Let us generate sub-samples of size 7,000 from a sample of size 10,000 drawn from a population of size 100,000 
+# CASE 1: When the population is Uniformly distributed
+pop = runif(100000, 0,100)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_maxs = c()
+for(i in 1:10000) {vector_of_maxs = c(vector_of_maxs, max(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_maxs, col="Blue", breaks = 15, main="Bootstrapping with Uniform Population")
+
+# CASE 2: When the population is normally distributed
+pop = rnorm(100000, 50, 5)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_maxs = c()
+for(i in 1:10000) {vector_of_maxs = c(vector_of_maxs, max(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_maxs, col="Red", breaks = 15, main="Bootstrapping with Normal Population")
+
+# CASE 3: When the population is poisson distributed
+pop = rpois(100000, 50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_maxs = c()
+for(i in 1:10000) {vector_of_maxs = c(vector_of_maxs, max(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_maxs, col="Green", breaks = 15, main="Bootstrapping with Poisson Population")
+
+# CASE 4: When the population is Binomial distributed
+pop = rbinom(100000, 1000, .05)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_maxs = c()
+for(i in 1:10000) {vector_of_maxs = c(vector_of_maxs, max(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_maxs, col="Violet", breaks = 15, main="Bootstrapping with Binomial Population")
+
+# CASE 5: When the population is Gamma distributed
+pop = rgamma(100000, 50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_maxs = c()
+for(i in 1:10000) {vector_of_maxs = c(vector_of_maxs, max(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_maxs, col="Cyan", breaks = 15, main="Bootstrapping with Gamma Population")
+
+# CASE 6: When the population is Chi-Square distributed
+pop = rchisq(100000, df=50)
+samp = sample(pop, 10000, replace=FALSE)
+vector_of_maxs = c()
+for(i in 1:10000) {vector_of_maxs = c(vector_of_maxs, max(sample(samp, 10000, replace=TRUE)))}
+hist(vector_of_maxs, col="Orange", breaks = 15, main="Bootstrapping with Chi-Square Population")
+#
+```
+# As you can see, The sampling distributions are hardly normal.The Central Limit Theorem only appplies to mean values, not the extreme values.
